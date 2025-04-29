@@ -1,46 +1,82 @@
-from locators.order_page_locators import OrderPageLocators
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
+import re
 
-class OrderPage:
+from pages.base_page import BasePage
+from utils.locators import YaScooterOrderPageLocator as Locators
+import allure
 
-    def __init__(self, driver):
-        self.driver = driver
 
-    def fill_personal_info(self, name, surname, address, metro, phone):
-        self.driver.find_element(*OrderPageLocators.INPUT_NAME).send_keys(name)
-        self.driver.find_element(*OrderPageLocators.INPUT_SURNAME).send_keys(surname)
-        self.driver.find_element(*OrderPageLocators.INPUT_ADDRESS).send_keys(address)
+class YaScooterOrderPage(BasePage):
+    @allure.step('Ввод фамилии')
+    def input_last_name(self, last_name: str):
+        return self.find_element(Locators.LAST_NAME_INPUT).send_keys(last_name)
 
-        self.driver.find_element(*OrderPageLocators.INPUT_METRO).click()
-        metro_options = WebDriverWait(self.driver, 5).until(
-            EC.visibility_of_all_elements_located(OrderPageLocators.METRO_LIST)
-        )
-        for option in metro_options:
-            if metro.lower() in option.text.lower():
-                option.click()
-                break
+    @allure.step('Ввод имени')
+    def input_first_name(self, first_name: str):
+        return self.find_element(Locators.FIRST_NAME_INPUT).send_keys(first_name)
 
-        self.driver.find_element(*OrderPageLocators.INPUT_PHONE).send_keys(phone)
-        self.driver.find_element(*OrderPageLocators.BUTTON_NEXT).click()
+    @allure.step('Ввод адреса')
+    def input_address(self, address: str):
+        return self.find_element(Locators.ADDRESS_INPUT).send_keys(address)
 
-    def fill_rent_info(self, date, comment, color):
-        self.driver.find_element(*OrderPageLocators.INPUT_DATE).send_keys(date)
-        self.driver.find_element(*OrderPageLocators.DROPDOWN_RENT_TIME).click()
-        self.driver.find_element(*OrderPageLocators.RENT_TIME_ONE_DAY).click()
+    @allure.step('Выбор метро')
+    def choose_subway(self, subway_name: str):
+        self.find_element(Locators.SUBWAY_FIELD).click()
+        return self.find_element(Locators.SUBWAY_HINT_BUTTON(subway_name)).click()
 
-        if color == "black":
-            self.driver.find_element(*OrderPageLocators.COLOR_BLACK).click()
-        elif color == "grey":
-            self.driver.find_element(*OrderPageLocators.COLOR_GREY).click()
+    @allure.step('Ввод номера телефона')
+    def input_telephone_number(self, telephone_number: str):
+        return self.find_element(Locators.TELEPHONE_NUMBER_FIELD).send_keys(telephone_number)
 
-        self.driver.find_element(*OrderPageLocators.INPUT_COMMENT).send_keys(comment)
-        self.driver.find_element(*OrderPageLocators.BUTTON_ORDER).click()
-        WebDriverWait(self.driver, 5).until(
-            EC.element_to_be_clickable(OrderPageLocators.BUTTON_CONFIRM_ORDER)
-        ).click()
+    @allure.step('Перейти на следующий этап заказа')
+    def go_next(self):
+        return self.find_element(Locators.NEXT_BUTTON).click()
 
-    def is_success_modal_displayed(self):
-        return WebDriverWait(self.driver, 5).until(
-            EC.visibility_of_element_located(OrderPageLocators.SUCCESS_MODAL)
-        ).is_displayed()
+    @allure.step('Ввод даты')
+    def input_date(self, date: str):
+        return self.find_element(Locators.DATE_FIELD).send_keys(date)
+
+    @allure.step('Выбор периода аренды')
+    def choose_rental_period(self, option: int):
+        self.find_element(Locators.RENTAL_PERIOD_FIELD).click()
+        return self.find_elements(Locators.RENTAL_PERIOD_LIST)[option].click()
+
+    @allure.step('Выбор цвета')
+    def choose_color(self, option: int):
+        return self.find_elements(Locators.COLOR_CHECKBOXES)[option].click()
+
+    @allure.step('Комментарий для курьера')
+    def input_comment(self, comment_text):
+        return self.find_element(Locators.COMMENT_FOR_COURIER_FIELD).send_keys(comment_text)
+
+    @allure.step('Нажать "Заказать"')
+    def click_order(self):
+        return self.find_element(Locators.ORDER_BUTTON).click()
+
+    @allure.step('Подтвердить заказ')
+    def click_accept_order(self):
+        return self.find_element(Locators.ACCEPT_ORDER_BUTTON).click()
+
+    @allure.step('Вычитать номер заказа')
+    def get_order_number(self):
+        about_order_text = self.find_element(Locators.ORDER_COMPLETED_INFO).text
+        return ''.join(re.findall('[0-9]', about_order_text))
+
+    @allure.step('Перейти к статусу заказа')
+    def click_go_to_status(self):
+        return self.find_element(Locators.SHOW_STATUS_BUTTON).click()
+
+    @allure.step('Заполнить данные на этапе "Для кого самокат"')
+    def fill_user_data(self, data_set: dict):
+        self.input_first_name(data_set['first_name'])
+        self.input_last_name(data_set['last_name'])
+        self.input_address(data_set['address'])
+        self.choose_subway(data_set['subway_name'])
+        self.input_telephone_number(data_set['telepthone_number'])
+
+    @allure.step('Заполнить данные на этапе "Про аренду"')
+    def fill_rent_data(self, data_set: dict):
+        self.input_date(data_set['date'])
+        self.choose_rental_period(data_set['rental_period'])
+        for option in data_set['color']:
+            self.choose_color(option)
+        self.input_comment(data_set['comment_for_courier'])

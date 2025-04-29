@@ -1,28 +1,37 @@
 import pytest
-from pages.faq_page import FAQPage
-
-faq_data = [
-    (0, "Сколько это стоит? И как оплатить?"),
-    (1, "Хочу сразу несколько самокатов! Так можно?"),
-    (2, "Как рассчитывается время аренды?"),
-    (3, "Можно ли заказать самокат прямо на сегодня?"),
-    (4, "Можно ли продлить заказ или вернуть самокат раньше?"),
-    (5, "Вы привозите зарядку вместе с самокатом?"),
-    (6, "Можно ли отменить заказ?"),
-    (7, "Я живу за МКАДом, привезёте?"),
-]
+import allure
+from pages.home_page import YaScooterHomePage
+from utils.test_data import YaScooterHomePageFAQ
+from utils.locators import YaScooterHomePageLocator
 
 
-@pytest.mark.parametrize("index, expected_text", faq_data)
-def test_faq_question_expand_and_collapse(driver, index, expected_text):
-    page = FAQPage(driver)
-    driver.get('https://qa-scooter.praktikum-services.ru/')
+@allure.epic('Эпик_Upgrade Main page / ui usability')
+@allure.parent_suite('Parent_suite_Домашняя страница')
+@allure.suite('Suite_FAQ')
+class TestYaScooterFAQPage:
+    @allure.feature('Фича_Аккордион с вопрос/ответ на Домашней страницы')
+    @allure.story('Стори_При нажатии на вопрос в разделе "Вопросы о важном" раскрывается ответ.')
+    @allure.title('При нажатии на вопрос раскрывается ответ ')
+    @allure.description('Проверка что при нажатии на поле вопроса в блоке "Вопросы о важном", '
+                        'данный вопрос раскрывается и текст в нем соответствует ТЗ')
+    @pytest.mark.parametrize(
+        "question,answer,expected_answer",
+        [
+            (0, 0, YaScooterHomePageFAQ.answer1),
+            (1, 1, YaScooterHomePageFAQ.answer2),
+            (2, 2, YaScooterHomePageFAQ.answer3),
+            (3, 3, YaScooterHomePageFAQ.answer4),
+            (4, 4, YaScooterHomePageFAQ.answer5),
+            (5, 5, YaScooterHomePageFAQ.answer6),
+            (6, 6, YaScooterHomePageFAQ.answer7),
+            (7, 7, YaScooterHomePageFAQ.answer8),
+        ]
+    )
+    def test_faq_click_first_question_show_answer(self, driver, question, answer, expected_answer):
+        ya_scooter_home_page = YaScooterHomePage(driver)
+        ya_scooter_home_page.go_to_site()
+        ya_scooter_home_page.click_cookie_accept()
+        ya_scooter_home_page.click_faq_question(question_number=question)
+        answer = ya_scooter_home_page.find_element(YaScooterHomePageLocator.FAQ_ANSWER(answer_number=answer))
 
-        # Клик — открыть ответ
-    page.click_question(index)
-    assert page.is_answer_displayed(index), f"Ответ на вопрос {index} не открылся."
-    assert expected_text in page.get_answer_text(index), f"Ответ текста не совпадает для вопроса {index}."
-
-        # Клик — закрыть ответ
-    page.click_question(index)
-    assert not page.is_answer_displayed(index), f"Ответ на вопрос {index} не закрылся."
+        assert answer.is_displayed() and answer.text == expected_answer, 'Ответ на вопрос не совпадает с ожидаемым значением '
